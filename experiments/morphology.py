@@ -1,8 +1,6 @@
 import sys
 import cv2
 import numpy as np
-# from rlsa import rlsa
-# import math
 
 def load_gray(path):
     """
@@ -79,17 +77,10 @@ if __name__ == "__main__":
 
     cv2.imwrite('2.png',binary_img)
 
-    morph_img = open_then_close(binary_img,kernel_size=3,open_its=5,close_its=3)
+    morph_img = open_then_close(binary_img,kernel_size=3,open_its=5,close_its=0)
 
     # invert so contours have correct normals
     morph_img_inv = cv2.bitwise_not(morph_img)
-    draw_boxes(morph_img_inv,original_img,100,100)
+    draw_boxes(morph_img_inv,original_img,200,200)
 
     cv2.imwrite('4.png',original_img)
-
-    # x, y = img.shape
-    #
-    # # rlsa
-    # value = max(math.ceil(x/100),math.ceil(y/100))+1 #heuristic
-    # img = rlsa(img, False, True, value) #rlsa application
-    # cv2.imwrite('3.png',img)
