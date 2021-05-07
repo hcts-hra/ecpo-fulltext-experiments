@@ -54,6 +54,8 @@ def extend_vertical_lines(img, min_size, min_aspect_ratio):
                 while img[seed_y-1,seed_x] == 255:
                     img[seed_y-1,seed_x] = 0
                     seed_y -= 1
+                # connect pixel bridge to contour by adding horizontal lines to get a ⟂ shape
+                img[y,x:x+w] = 0
 
             # bottom (repeat as above, seed_x stays the same)
             seed_y = y+h # bottom of bounding box
@@ -62,9 +64,9 @@ def extend_vertical_lines(img, min_size, min_aspect_ratio):
                 while img[seed_y+1,seed_x] == 255:
                     img[seed_y+1,seed_x] = 0
                     seed_y += 1
+                # connect pixel bridge to contour by adding horizontal lines to get a T shape
+                img[y+h,x:x+w] = 0
 
-            # make sure contour itself is connected to either pixel bridge
-            img[y:y+h+1,seed_x] = 0
 
 def draw_white_box_contours(contour_src, target_img):
     """
@@ -107,34 +109,148 @@ def draw_white_box_contours(contour_src, target_img):
     cv2.imwrite('6.png',target_img)
 
 
+def crop(img, contour):
+    """
+    crops a contour from an image
+    """
+    x,y,w,h = cv2.boundingRect(contour)
+    return img[y:y+h, x:x+w]
 
 
+def find_angle(img):
+    """
+    finds the angle an image containing text is rotated by
+    """
+    # use bigger kernel for average thresholding and then invert
+    binary_img_inv = cv2.bitwise_not(binarize(grayscale_img,555,50))
+    cv2.imwrite('0.png',binary_img_inv)
 
+    # erode to remove noise and get text areas only
+    # eroded = cv2.erode(binary_img_inv,np.ones((15,15),np.uint8),iterations=1)
+    img = binary_img_inv
+    cv2.imwrite('1.png',img)
+    img = cv2.morphologyEx(img,cv2.MORPH_CLOSE,np.ones((3,3),np.uint8),iterations=3)
+    cv2.imwrite('2.png',img)
+    # img = cv2.morphologyEx(img,cv2.MORPH_OPEN,np.ones((3,3),np.uint8),iterations=3)
+    # cv2.imwrite('3.png',img)
+    # dilated = cv2.dilate(opened,np.ones((2,2),np.uint8),iterations=1)
 
+    contours,_ = cv2.findContours(img,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+
+    # iniatialising the empty angles list to collet the angles of each contour
+    angles = []
+
+    # obtaining the angles of each contour using a for loop
+    for idx, cnt in enumerate(contours):
+        # the last output of the cv2.minAreaRect() is the orientation of the contour
+        [x,y,w,h] = cv2.boundingRect(cnt)
+        if (w > 50 or h > 50) and (w < 50):
+
+            rect = cv2.minAreaRect(cnt)
+            box = np.int0(cv2.boxPoints(rect))
+            cv2.drawContours(img, [box], 0, (100), 3)
+            # cv2.rectangle(img, (x,y), (x+w,y+h), (100), 3)
+            angles.append(rect[-1])
+
+    # finding the median of the collected angles
+    angles.sort()
+    median_angle = np.median(angles)
+    cv2.imwrite('4.png',img)
+
+    # returning the median angle
+    # for i, a in enumerate(angles):
+    #     print(i,a)
+    return median_angle
+
+def deskew(no_separators_img):
+    """
+    finds angle using rlsa
+    """
+    pass
+
+def skeletize(img):
+    """
+    returns skeleton of black elements in img
+    """
+    size = np.size(img)
+    skel = np.zeros(img.shape,np.uint8)
+
+    element = cv2.getStructuringElement(cv2.MORPH_CROSS,(5,5))
+    done = False
+
+    while( not done):
+        eroded = cv2.erode(img,element)
+        temp = cv2.dilate(eroded,element)
+        temp = cv2.subtract(img,temp)
+        skel = cv2.bitwise_or(skel,temp)
+        img = eroded.copy()
+
+        zeros = size - cv2.countNonZero(img)
+        if zeros==size:
+            done = True
+
+    cv2.imwrite('4-2.png',skel)
+    return skel
+
+def free_vertical_sepators(img):
+    """
+    cuts vertical separators free from horizontal ones connecting from the side
+    works for ├, ┼, ┤ as well as └, ┴, ┬, ┌, etc.
+    """
+    # kernels to draw 4~5px-wide frame left and right from all contours
+    kernel_right = np.array([[-1,-1,-1, 1, 1, 1, 0, 0, 0, 0, 0]])
+    kernel_left  = np.array([[ 0, 0, 0, 0, 0, 1, 1, 1,-1,-1,-1]])
+    mask = cv2.bitwise_or(cv2.filter2D(img, -1, kernel_right), cv2.filter2D(img, -1, kernel_left))
+    # cv2.imshow('image',mask)
+    # cv2.waitKey(0)
+
+    # only keep those parts of the mask that are long vertical lines
+    opening_kernel = np.tile(np.array([[1]]),(15,1))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, opening_kernel)
+    # cv2.imshow('image',mask)
+    # cv2.waitKey(0)
+
+    # make every white pixel in mask turn into 10 vertically stacked white pixels
+    extension_kernel = np.tile(np.array([[1]]),(10,1))
+    mask = cv2.filter2D(mask, -1, extension_kernel)
+    # cv2.imshow('image',mask)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+    # cv2.imwrite('2-10.png',mask)
+    # cv2.imwrite('2-13.png',cv2.bitwise_or(img,mask))
+    return cv2.bitwise_or(img,mask)
 
 
 if __name__ == "__main__":
     path_to_image = sys.argv[1]
     original_img, grayscale_img = load_gray(path_to_image)
+
     print("binarizing image ...")
-    binary_img = binarize(grayscale_img,35,0)
+    binary_img = binarize(grayscale_img,21,20)
     cv2.imwrite('0.png',binary_img)
 
     binary_img_inv = cv2.bitwise_not(binary_img)
 
     print("removing all but separators ...")
     # connected 4-side rectangular separator > 300 > height of potentially connected heading
-    # aspect ration of potentially connected character patches > 5 > aspect ration of separators
+    # aspect ration of potentially connected character patches < 5 < aspect ration of separators
     remove_separators(binary_img,300,5)
+    # no_separators_img = binary_img
+    # cv2.imwrite("2.png",no_separators_img)
     only_separators_img = cv2.bitwise_not(binary_img_inv - cv2.bitwise_not(binary_img))
     cv2.imwrite('2.png',only_separators_img)
 
-    print("morphological closing ...")
-    only_separators_img = cv2.morphologyEx(only_separators_img, cv2.MORPH_CLOSE, np.ones([3,3]))
-    cv2.imwrite('2-1.png',only_separators_img)
+    # print("removing some noise ...")
+    # only_separators_img = cv2.morphologyEx(only_separators_img, cv2.MORPH_CLOSE, np.ones([3,3]))
+    # cv2.imwrite('2-1.png',only_separators_img)
+
+
+    print("cutting vertical separators free ...")
+    only_separators_img = free_vertical_sepators(only_separators_img)
 
     print("extending vertical lines ...")
-    extend_vertical_lines(only_separators_img,300,10)
+    extend_vertical_lines(only_separators_img,300,6)
     cv2.imwrite('3.png',only_separators_img)
 
     # rlsa
@@ -145,14 +261,30 @@ if __name__ == "__main__":
     # so as not to close them up
     only_separators_img = rlsa_fast(only_separators_img, True, True, 40)
     cv2.imwrite('4.png',only_separators_img)
+    only_separators_img = np.uint8(only_separators_img)
+
+    # print("skeletizing ...")
+    # skel = skeletize(cv2.bitwise_not(only_separators_img))
+
+    print("connecting line ends and corners ...")
+    corners = cv2.goodFeaturesToTrack(only_separators_img,1000,0.2,10)
+    corners = np.int0(corners)
+    copy = only_separators_img.copy() # to draw points without modifying img
+    for i in corners:
+        xi,yi = i.ravel()
+        for j in corners:
+            if cv2.norm(i,j) < 60:
+                xj,yj = j.ravel()
+                cv2.line(only_separators_img,(xi,yi),(xj,yj),(0),3)
+        cv2.circle(copy,(xi,yi),7,150,-1)
+
+
+    cv2.imwrite('4-2.png', copy)
+    cv2.imwrite('4-3.png', only_separators_img)
 
     # draw contours on original img
     print("drawing box contours ...")
+    cv2.imwrite('5.png',original_img)
     draw_white_box_contours(only_separators_img,original_img)
-    # cv2.imwrite('5.png',original_img)
 
     print("done")
-
-    # to crop
-    # x,y,w,h = cv2.boundingRect(contour)
-    # cropped_section = image[y:y+h, x:x+w]

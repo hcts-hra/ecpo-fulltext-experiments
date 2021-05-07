@@ -1,0 +1,6 @@
+jb_3402_1937-12-16_0002.png: über der Überschrift "女青年..." in der Mitte zweispaltig 介紹 (bzw. vrnl 紹介) →  was passiert bei OCR?
+jb_2433_1935-02-12_0002+0003.jpg: vertikaler Separator ist mit horizontalem verbunden, auch bei:
+	...
+	...
+jb_1191_1929-02-15_0002+0003.jpg: horizontale linien auf dem scan machen alles kaputt
+jb_0573_1923-12-06_0002+0003.jpg: corner connection rettet lücke im äußeren rahmen rechts oben
