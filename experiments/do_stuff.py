@@ -31,11 +31,11 @@ def remove_separators(img, min_size, min_aspect_ratio):
             cv2.drawContours(img, contours, idx, (255,255,255), -1)
     cv2.imwrite("1-2.png", img)
 
-def extend_vertical_lines(img, min_size, min_aspect_ratio):
+def extend_vertical_lines(img, max_distance, min_height, min_aspect_ratio):
     """
     finds vertical contours with height/width > min_aspect_ratio
     draws pixel bridges at the top and/or bottom of these contours
-        if another object is within reach of min_size
+        if another object is within reach of max_distance
     """
     img_inv = cv2.bitwise_not(img)
     contours, hierarchy = cv2.findContours(img_inv, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -43,29 +43,40 @@ def extend_vertical_lines(img, min_size, min_aspect_ratio):
     for contour in contours:
         [x,y,w,h] = cv2.boundingRect(contour)
 
-        if h/w > min_aspect_ratio:
+        if h/w > min_aspect_ratio and h > min_height:
+
+            # # to test which separators are found by this approach:
+            # cv2.rectangle(img, (x,y), (x+w,y+h), (180), 2)
 
             # top
-            seed_x = round((x+(x+w))/2)-1 # horizontal middle of bounding box
             seed_y = y # top of bounding box
-            y_min = max(0, seed_y-min_size) # just in case y-min_size < 0
-            if 0 in img[y_min:seed_y,seed_x]: # if there's another object close enough
-                # draw a pixel bridge to that object
-                while img[seed_y-1,seed_x] == 255:
-                    img[seed_y-1,seed_x] = 0
-                    seed_y -= 1
-                # connect pixel bridge to contour by adding horizontal lines to get a ⟂ shape
-                img[y,x:x+w] = 0
+            # find where on the top line of the contour there are actually black pixels
+            black_pixels_at_top = np.where(img[seed_y,x:x+w]==0)[0]
+            y_min = max(0, seed_y-max_distance) # just in case y-max_distance is off the image
+            for idx in black_pixels_at_top:
+                seed_x = x+idx
+                # -2 below is just to make sure we're safely outside the contour
+                black_pixels_over_contour = np.where(img[y_min:seed_y-2,seed_x]==0)[0]
+                if len(black_pixels_over_contour) > 0: # if there's another object within max_distance
+                    # draw a connecting line to that object
+                    black_pixel_closest_to_contour = np.max(black_pixels_over_contour)
+                    line_from = (seed_x,seed_y)
+                    line_to = (seed_x,y_min+black_pixel_closest_to_contour)
+                    cv2.line(img,line_from,line_to,(0),1)
 
-            # bottom (repeat as above, seed_x stays the same)
-            seed_y = y+h # bottom of bounding box
-            y_max = min(img.shape[0]-1, seed_y+min_size)
-            if 0 in img[seed_y:y_max,seed_x]:
-                while img[seed_y+1,seed_x] == 255:
-                    img[seed_y+1,seed_x] = 0
-                    seed_y += 1
-                # connect pixel bridge to contour by adding horizontal lines to get a T shape
-                img[y+h,x:x+w] = 0
+            # bottom (repeat analogous to top)
+            seed_y = y+h-1 # bottom of bounding box
+            black_pixels_at_btm = np.where(img[seed_y,x:x+w]==0)[0]
+            print(black_pixels_at_btm)
+            y_max = min(img.shape[0]-1, seed_y+max_distance)
+            for idx in black_pixels_at_btm:
+                seed_x = x+idx
+                black_pixels_under_contour = np.where(img[seed_y+2:y_max,seed_x]==0)[0]
+                if len(black_pixels_under_contour) > 0:
+                    black_pixel_closest_to_contour = np.min(black_pixels_under_contour)
+                    line_from = (seed_x,seed_y)
+                    line_to = (seed_x,seed_y+black_pixel_closest_to_contour)
+                    cv2.line(img,line_from,line_to,(0),1)
 
 
 def draw_white_box_contours(contour_src, target_img):
@@ -205,13 +216,13 @@ def free_vertical_sepators(img):
     # cv2.waitKey(0)
 
     # only keep those parts of the mask that are long vertical lines
-    opening_kernel = np.tile(np.array([[1]]),(15,1))
+    opening_kernel = np.tile(np.array([[1]]),(50,1))
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, opening_kernel)
     # cv2.imshow('image',mask)
     # cv2.waitKey(0)
 
-    # make every white pixel in mask turn into 10 vertically stacked white pixels
-    extension_kernel = np.tile(np.array([[1]]),(10,1))
+    # make every white pixel in mask turn into 20 vertically stacked white pixels
+    extension_kernel = np.tile(np.array([[1]]),(20,1))
     mask = cv2.filter2D(mask, -1, extension_kernel)
     # cv2.imshow('image',mask)
     # cv2.waitKey(0)
@@ -229,6 +240,9 @@ if __name__ == "__main__":
     print("binarizing image ...")
     binary_img = binarize(grayscale_img,21,20)
     cv2.imwrite('0.png',binary_img)
+    print("cutting separators free")
+    binary_img = free_vertical_sepators(binary_img)
+    cv2.imwrite('0-1.png', binary_img)
 
     binary_img_inv = cv2.bitwise_not(binary_img)
 
@@ -250,7 +264,8 @@ if __name__ == "__main__":
     only_separators_img = free_vertical_sepators(only_separators_img)
 
     print("extending vertical lines ...")
-    extend_vertical_lines(only_separators_img,300,6)
+    # the shortest free-standing wave-line separator I saw was 98 px > 80 = min_height
+    extend_vertical_lines(only_separators_img,max_distance=300,min_height=80,min_aspect_ratio=6)
     cv2.imwrite('3.png',only_separators_img)
 
     # rlsa
