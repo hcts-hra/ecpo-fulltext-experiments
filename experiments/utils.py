@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import time
 
 #################################
 ############ GENERAL ############
@@ -82,14 +83,14 @@ def remove_separators(img, min_size, min_aspect_ratio):
             # -1 instead of idx to draw all contours
             # -1 instead of thickness to fill bounded area instead of drawing line contours
             cv2.drawContours(img, contours, idx, (255,255,255), -1)
-    cv2.imwrite("1-1.png", img)
+    cv2.imwrite("1_1.png", img)
     for idx, contour in enumerate(contours):
         [x,y,w,h] = cv2.boundingRect(contour)
         if w/h > min_aspect_ratio or h/w > min_aspect_ratio:
             # -1 instead of idx to draw all contours
             # -1 instead of thickness to fill bounded area instead of drawing line contours
             cv2.drawContours(img, contours, idx, (255,255,255), -1)
-    cv2.imwrite("1-2.png", img)
+    cv2.imwrite("1_2.png", img)
 
 def free_vertical_sepators(img):
     """
@@ -120,7 +121,7 @@ def free_vertical_sepators(img):
     # cv2.imwrite('2-13.png',cv2.bitwise_or(img,mask))
     return cv2.bitwise_or(img,mask)
 
-def extend_lines(img, mode, max_distance, min_length, min_aspect_ratio):
+def extend_separators(img, mode, max_distance, min_length, min_aspect_ratio):
     """
     mode="vertical":
         finds vertical contours with height/width > min_aspect_ratio and height > min_length
@@ -131,11 +132,14 @@ def extend_lines(img, mode, max_distance, min_length, min_aspect_ratio):
     """
     img_inv = cv2.bitwise_not(img)
     contours, hierarchy = cv2.findContours(img_inv, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    img_copy = img.copy()
+
 
     for contour in contours:
         [x,y,w,h] = cv2.boundingRect(contour)
 
-        if mode=="vertical":
+        # leave a 100 px margin because contours at the edge of the image behave weirdly
+        if mode=="vertical" and y > 10 and y+h < img.shape[0]-10:
 
             if h/w > min_aspect_ratio and h > min_length:
 
@@ -171,12 +175,12 @@ def extend_lines(img, mode, max_distance, min_length, min_aspect_ratio):
                         line_to = (seed_x,seed_y+black_pixel_closest_to_contour)
                         cv2.line(img,line_from,line_to,(0),1)
 
-        elif mode=="horizontal": # analogous to the vertical case
+        elif mode=="horizontal" and x > 10 and x+w < img.shape[1]-10: # analogous to the vertical case
 
             if w/h > min_aspect_ratio and w > min_length:
 
-                # # to test which contours are found:
-                # cv2.rectangle(img, (x,y), (x+w,y+h), (180), 2)
+                # to test which contours are found:
+                cv2.rectangle(img_copy, (x,y), (x+w,y+h), (180), 2)
 
                 # left
                 seed_x = x # left end of bounding box
@@ -204,6 +208,9 @@ def extend_lines(img, mode, max_distance, min_length, min_aspect_ratio):
                         line_to = (seed_x+black_pixel_closest_to_contour,seed_y)
                         cv2.line(img,line_from,line_to,(0),1)
 
+
+    cv2.imwrite('3-01.png', img_copy)
+
 def draw_white_box_contours(contour_src, target_img):
     """
     draws contours wider than min_width OR taller than min_height over in white
@@ -217,7 +224,7 @@ def draw_white_box_contours(contour_src, target_img):
 
     unsmoothed_contours = target_img.copy()
     cv2.drawContours(unsmoothed_contours, contours, -1, (200,0,0), 3)
-    cv2.imwrite('8_unsmoothed_contours.png',unsmoothed_contours)
+    cv2.imwrite('8.png',unsmoothed_contours)
 
     print("computing and drawing smoothed box contours ...")
     for idx, contour in enumerate(contours):
