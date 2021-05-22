@@ -13,13 +13,16 @@ if __name__ == "__main__":
     img = binarize(grayscale_img,21,20)
     cv2.imwrite('0.png',img)
 
-    print("generating mask to deal with horizontal line noise on scan ...")
-    mask = cv2.bitwise_not(binarize(grayscale_img,355,0))
-    cv2.imwrite('mask0.png',mask)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((6,3)))
-    cv2.imwrite('mask1.png',mask)
-    mask = cv2.erode(mask,np.ones((45,1)))
-    cv2.imwrite('mask2.png',mask)
+    # denoised = cv2.fastNlMeansDenoising(grayscale_img)
+    # cv2.imwrite('denoising_grey.png', denoised)
+
+    # print("generating mask to deal with horizontal line noise on scan ...")
+    # mask = cv2.bitwise_not(binarize(grayscale_img,355,0))
+    # cv2.imwrite('mask0.png',mask)
+    # mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((6,3)))
+    # cv2.imwrite('mask1.png',mask)
+    # mask = cv2.erode(mask,np.ones((45,1)))
+    # cv2.imwrite('mask2.png',mask)
 
     print("morphological opening to connect separator fragments ...")
     # during erosion (black contours grow) extend contours 2 px
@@ -54,24 +57,36 @@ if __name__ == "__main__":
     img = cv2.bitwise_and(vertical,horizontal)
     cv2.imwrite('3_1.png', img)
 
-
-    line_width = 5
-    line_end_length = 50
+    print("more vertical separator extension")
+    line_width = 10
+    line_end_length = 30
     line_extension = 100
-    margin = 20
-    bottom_line_end_kernel = np.append(np.tile(np.array([-10]*margin+[1]*line_width+[-10]*margin),(10,1)), np.tile(np.array([-10]*margin+[-10]*line_width+[-10]*margin),(margin,1)), 0)
-    line_ends = cv2.dilate(cv2.filter2D(cv2.erode(cv2.bitwise_not(img),np.ones((line_end_length,1))), -1, bottom_line_end_kernel),np.ones((line_extension,1)))
+    margin = 50
+    kernel_top = np.tile(np.array([-10]*margin+[- 1]*line_width+[-10]*margin),(5,1))
+    kernel_ctr = np.tile(np.array([-10]*margin+[  1]*line_width+[-10]*margin),(10,1))
+    kernel_btm = np.tile(np.array([-10]*margin+[-10]*line_width+[-10]*margin),(margin,1))
+    bottom_line_end_kernel = np.concatenate((kernel_top,kernel_ctr,kernel_btm),axis=0)
+
+    img_without_small_contours = img.copy()
+
+    contours, _ = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    for idx, contour in enumerate(contours):
+        [x,y,w,h] = cv2.boundingRect(contour)
+        if w < 100 and h < 100:
+            cv2.drawContours(img_without_small_contours, contours, idx, (255), -1)
+
+    line_ends = cv2.dilate(cv2.filter2D(cv2.bitwise_not(img_without_small_contours), -1, bottom_line_end_kernel),np.ones((line_extension,1)))
     img = cv2.bitwise_and(cv2.bitwise_not(line_ends),img)
-    cv2.imwrite('3_2.png',img)
+    cv2.imwrite('3_2.png',line_ends)
 
 
     # rlsa
     print("applying RLSA ...")
     x, y = img.shape
 
-    # for one-column boxes there is usually 50 px space, we need to go below that
+    # for one-column boxes there is usually min. 30 px space, we need to go below that
     # so as not to close them up
-    img = rlsa_fast(img, True, True, 40)
+    img = rlsa_fast(img, True, True, 25)
     cv2.imwrite('4.png',img)
     img = np.uint8(img)
 
