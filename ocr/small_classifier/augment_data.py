@@ -44,7 +44,7 @@ def noisify(filename, noise_level):
 
 if __name__ == "__main__":
 
-    path_to_clean_data = sys.argv[1]
+    path_to_clean_data = sys.argv[1] # e.g. some_glyph_pngs
     iterations = 5
 
     filenames = [f for _,_,fi in os.walk(path_to_clean_data) for f in fi]
@@ -55,5 +55,7 @@ if __name__ == "__main__":
             for filename in filenames:
                 img = noisify(os.path.join(path_to_clean_data,filename), noise_level)
                 new_filename = f"{filename.split('.')[0]}-{noise_level}-{i+1}.png"
-                cv2.imwrite(new_filename, img)
+                cv2.imwrite(f"augmented_data/{new_filename}", img)
                 print("generated", new_filename, "done")
+
+    # augmented_data/ now contains train + val, manual separation required
