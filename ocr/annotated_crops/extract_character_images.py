@@ -109,7 +109,7 @@ def crop_chars(image,idx):
     # img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
     #        cv2.THRESH_BINARY,125,0)
     img = better_binarize(img,c=0)
-    cv2.imwrite(f"binary-{idx}.jpg",img)
+    # cv2.imwrite(f"binary-{idx}.jpg",img)
 
     # black rectangle at the outside to find peak outside of outmost character
     cv2.rectangle(img,(0,0),(img.shape[1],img.shape[0]),(0),2)
@@ -121,7 +121,7 @@ def crop_chars(image,idx):
 
     # open annotations
     with open(f"{idx}.txt") as f:
-        columns = [line.strip().strip("<lb/>") for line in f.readlines()]
+        columns = [line.strip().strip("<lb/>").replace("&gaiji;","e") for line in f.readlines()]
         assert len(columns) == len(peaks_ver)-1, f"wrong number of columns at idx {idx}"
 
     img_annotation_dict = {char:[] for column in columns for char in column}
@@ -147,22 +147,52 @@ def crop_chars(image,idx):
 
         # for wiki image
         # for j in range(len(peaks_hor)-1): # iterate over characters within one column
-        #     cv2.line(image,(peaks_ver[i],peaks_hor_adjusted[j]),(peaks_ver[i+1],peaks_hor_adjusted[j]),(50),2)
+            # cv2.line(image,(peaks_ver[i],peaks_hor_adjusted[j]),(peaks_ver[i+1],peaks_hor_adjusted[j]),(50),2)
 
         # this time don't use binary but original image for cropping
+        # NOTE: in the future, preprocess the image before cropping because single char imgs are hard to preprocess
         orig_column = image[0:image.shape[0],peaks_ver[i]:peaks_ver[i+1]]
+        # cv2.imwrite(f"column-{i}.png",orig_column)
         for j in range(len(peaks_hor)-1):
             # crop actual character
             char_image = orig_column[peaks_hor_adjusted[j]:peaks_hor_adjusted[j+1],0:orig_column.shape[1]]
+            # print(char_image.shape)
+
+            # add padding around char_image
+            img_size = 50
+            vertical_padding = img_size - char_image.shape[0]
+            if vertical_padding%2: # odd number
+                top_padding = vertical_padding // 2 + 1
+                btm_padding = vertical_padding // 2
+            else: # even number
+                top_padding = btm_padding = vertical_padding // 2
+            horizontal_padding = img_size - char_image.shape[1]
+            if horizontal_padding%2:
+                left_padding = horizontal_padding // 2 + 1
+                right_padding = horizontal_padding // 2
+            else:
+                left_padding = right_padding = horizontal_padding // 2
+            char_image = cv2.copyMakeBorder(
+                char_image,
+                top_padding,
+                btm_padding,
+                left_padding,
+                right_padding,
+                cv2.BORDER_CONSTANT,
+                value=255
+            )
+            # print(char_image)
+
             # not good: resizing leads to distortion (duh), better work with center of mass?
-            char_image = cv2.resize(char_image,(30,30),interpolation = cv2.INTER_CUBIC)
+            # char_image = cv2.resize(char_image,(30,30),interpolation = cv2.INTER_CUBIC)
             if len(columns[-i-1]) > j:
                 char_annotation = columns[-i-1][j]
-            img_annotation_dict[char_annotation].append(char_image)
+            img_annotation_dict[char_annotation].append((char_image,len(columns)-i,j+1))
 
     img_annotation_dict.pop("e", None) # "e" is inserted as a placeholder where a new paragraph is intented
     for char,img_list in img_annotation_dict.items():
-        cv2.imwrite(os.path.join("char_images",f"{char}.png"),np.concatenate(img_list))
+        for char_image,i,j in img_list:
+            cv2.imwrite(os.path.join("char_images",f"{char}-{idx}-{i}-{j}.png"),char_image)
 
     # save image for wiki
     # cv2.imwrite(f"hybrid-{idx}.jpg",image)
@@ -171,7 +201,7 @@ def crop_chars(image,idx):
 if __name__ == "__main__":
 
     for file in os.listdir("."):
-        if file.endswith("01.png"):
+        if file.endswith(".png"):
 
             img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
             crop_chars(img,file[:2])
