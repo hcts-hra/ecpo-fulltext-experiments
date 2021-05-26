@@ -96,6 +96,7 @@ def draw_projection_profiles(proj_ver,proj_hor,idx):
     cv2.imwrite(f'horizontal_projection-{idx}.jpg', result)
 
 
+
 def crop_chars(image,idx):
     """
     uses horizontal and vertical projections to crop characters
@@ -118,12 +119,18 @@ def crop_chars(image,idx):
     peaks_ver, _ = find_peaks(proj_ver, distance=22) # average hor. char dist.: 31
     peaks_hor, _ = find_peaks(proj_hor, distance=21) # average vert. char dist.: 24
 
-    for i in range(len(peaks_ver)-1):
+    # open annotations
+    with open(f"{idx}.txt") as f:
+        columns = [line.strip().strip("<lb/>") for line in f.readlines()]
+        assert len(columns) == len(peaks_ver)-1, f"wrong number of columns at idx {idx}"
+
+    img_annotation_dict = {char:[] for column in columns for char in column}
+    for i in range(len(peaks_ver)-1): # iterate over columns
         # crop a column and draw its left border
         column = img[0:img.shape[0],peaks_ver[i]:peaks_ver[i+1]]
 
-        # for wiki image
-        cv2.line(image,(peaks_ver[i],0),(peaks_ver[i],img.shape[0]),(50),2)
+        # draw column border for wiki image
+        # cv2.line(image,(peaks_ver[i],0),(peaks_ver[i],img.shape[0]),(50),2)
 
         column = rlsa_fast(column, True, False, 10)
 
@@ -138,19 +145,33 @@ def crop_chars(image,idx):
             # adjust peaks_hor_adjusted to peak wherever peak is within thresh of any element
             peaks_hor_adjusted = np.where(np.abs(peaks_hor_adjusted-peak)<thresh,peak,peaks_hor_adjusted)
 
-
-
         # for wiki image
-        for j in range(len(peaks_hor)-1):
-            cv2.line(image,(peaks_ver[i],peaks_hor_adjusted[j]),(peaks_ver[i+1],peaks_hor_adjusted[j]),(50),2)
+        # for j in range(len(peaks_hor)-1): # iterate over characters within one column
+        #     cv2.line(image,(peaks_ver[i],peaks_hor_adjusted[j]),(peaks_ver[i+1],peaks_hor_adjusted[j]),(50),2)
 
-    cv2.imwrite(f"hybrid-{idx}.jpg",image)
+        # this time don't use binary but original image for cropping
+        orig_column = image[0:image.shape[0],peaks_ver[i]:peaks_ver[i+1]]
+        for j in range(len(peaks_hor)-1):
+            # crop actual character
+            char_image = orig_column[peaks_hor_adjusted[j]:peaks_hor_adjusted[j+1],0:orig_column.shape[1]]
+            # not good: resizing leads to distortion (duh), better work with center of mass?
+            char_image = cv2.resize(char_image,(30,30),interpolation = cv2.INTER_CUBIC)
+            if len(columns[-i-1]) > j:
+                char_annotation = columns[-i-1][j]
+            img_annotation_dict[char_annotation].append(char_image)
+
+    img_annotation_dict.pop("e", None) # "e" is inserted as a placeholder where a new paragraph is intented
+    for char,img_list in img_annotation_dict.items():
+        cv2.imwrite(os.path.join("char_images",f"{char}.png"),np.concatenate(img_list))
+
+    # save image for wiki
+    # cv2.imwrite(f"hybrid-{idx}.jpg",image)
 
 
 if __name__ == "__main__":
 
     for file in os.listdir("."):
-        if file.endswith(".png"):
+        if file.endswith("01.png"):
 
             img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
             crop_chars(img,file[:2])
