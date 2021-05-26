@@ -7,3 +7,5 @@ ocr/ocr_input.png
 ocr/small_classifier/train_data/
 ocr/small_classifier/val_data/
 ocr/tessconfig
+ocr/annotated_crops/*.png
+ocr/annotaded_crops/*.txt
