@@ -1,1 +1,9 @@
 experiments/*.png
+experiments/*.jpg
+examples/*.png
+examples/*.jpg
+ocr/binarized.png
+ocr/ocr_input.png
+ocr/small_classifier/train_data/
+ocr/small_classifier/val_data/
+ocr/tessconfig
