@@ -1,11 +1,15 @@
 experiments/*.png
 experiments/*.jpg
+experiments/remove_images.sh
+experiments/test.py
+
 examples/*.png
 examples/*.jpg
+
 ocr/binarized.png
 ocr/ocr_input.png
 ocr/small_classifier/train_data/
 ocr/small_classifier/val_data/
 ocr/tessconfig
-ocr/annotated_crops/*.png
-ocr/annotaded_crops/*.txt
+ocr/annotated_crops/
+!ocr/annotated_crop/extract_character_images.py
