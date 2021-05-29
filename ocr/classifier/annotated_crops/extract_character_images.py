@@ -1,4 +1,4 @@
-import os
+import os, sys
 import cv2
 import numpy as np
 from pythonRLSA import rlsa
@@ -219,11 +219,14 @@ def crop_chars(image,img_idx,write_processed_images=False):
 
 if __name__ == "__main__":
 
-    for file in os.listdir("."):
-        if file.endswith("184.png"):
-            print("processing", file, end="\r")
-            img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
-            img.dtype
-            crop_chars(img,file[:3],write_processed_images=True)
-    print(" "*30, end="\r")
-    print("done")
+    if len(sys.argv) == 2: # e.g. python3 extract_character_images.py 215
+        img = cv2.imread(f"{sys.argv[1]}.png", cv2.IMREAD_GRAYSCALE)
+        crop_chars(img,sys.argv[1],write_processed_images=True)
+    else: # all png files
+        for file in os.listdir("."):
+            if file.endswith(".png"):
+                print("processing", file, end="\r")
+                img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
+                crop_chars(img,file[:3],write_processed_images=False)
+        print(" "*30, end="\r")
+        print("done")
