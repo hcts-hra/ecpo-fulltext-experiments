@@ -198,7 +198,7 @@ def crop_chars(image,img_idx,write_processed_images=False):
             # b = cv2.bitwise_not(b)
             # centroid = tuple(np.uint8(nz.mean()) for nz in b.nonzero())
             # cv2.circle(b, centroid, 3,(100),1)
-            char_image = cv2.resize(char_image,(50,50),interpolation=cv2.INTER_CUBIC)
+            # char_image = cv2.resize(char_image,(50,50),interpolation=cv2.INTER_CUBIC)
 
             # append  idx [-i-1] to read columns from right to left
             if len(columns[-i-1]) > j:

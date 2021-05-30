@@ -8,6 +8,7 @@ from torchsummary import summary
 
 from dataset import SongTiDataset
 
+# copy-pasta from https://pytorch.org/vision/stable/_modules/torchvision/models/inception.html#inception_v3
 class BasicConv2d(nn.Module):
 
     def __init__(
@@ -25,38 +26,42 @@ class BasicConv2d(nn.Module):
         x = self.bn(x)
         return F.relu(x, inplace=True)
 
-
 class InceptionModel(nn.Module):
+
     def __init__(self, num_classes):
         super(InceptionModel, self).__init__()
-
-        # layers
         self.inception = models.inception_v3(
             num_classes=num_classes,
             aux_logits=False,
             transform_input=False,
             pretrained=False,
-            progress=True
+            progress=False
         )
-        self.inception.Conv2d_1a_3x3 = BasicConv2d(1, 32, kernel_size=3, stride=2)
-
-
-        # test input shape
-        self.print_shape = False
+        # modify to deal with 1-channel inputs as we have grayscale images
+        self.inception.Conv2d_1a_3x3 = BasicConv2d(1, 32, kernel_size=3, stride=1)
 
     def forward(self,img):
-        if self.print_shape:
-            print("shape before inception net:", img.shape)
-
         x = self.inception(img)
-
-        if self.print_shape:
-            print("shape after inception net:", x.shape)
-
         # return F.log_softmax(x, dim=1) # for nll_loss
         return x # for CrossEntropyLoss
         # expl. see here: https://stackoverflow.com/a/65193236/9920677
 
+class GoogleNetModel(nn.Module):
+
+    def __init__(self, num_classes):
+        super(GoogleNetModel, self).__init__()
+        self.googlenet = models.googlenet(
+            num_classes=num_classes,
+            aux_logits=False,
+            transform_input=False,
+            pretrained=False,
+            progress=False
+        )
+        # modify to deal with 1-channel inputs as we have grayscale images
+        self.googlenet.conv1 = BasicConv2d(1, 64, kernel_size=7, stride=2, padding=3)
+
+    def forward(self,img):
+        return self.googlenet(img)
 
 if __name__ == "__main__":
 
@@ -64,5 +69,5 @@ if __name__ == "__main__":
     NUM_CLASSES = 257
 
     # initialize model
-    model = InceptionModel(num_classes=NUM_CLASSES)
-    summary(model, (1, 299, 299)) # but we have (1, 101, 101)!
+    model = GoogleNetModel(num_classes=NUM_CLASSES)
+    summary(model, (1, 224,224)) # but we have (1, 101, 101)!

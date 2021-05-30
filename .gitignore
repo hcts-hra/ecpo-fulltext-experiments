@@ -10,6 +10,12 @@ ocr/binarized.png
 ocr/ocr_input.png
 ocr/small_classifier/train_data/
 ocr/small_classifier/val_data/
+ocr/small_classifier/log_outputs/
 ocr/tessconfig
+ocr/glyphs/
+ocr/classifier/train_data
+ocr/classifier/val_data
 ocr/classifier/annotated_crops/
-!ocr/classifier/annotated_crops/extract_character_images.py
+!ocr/classifier/annotated_crops/extract_character_images.py 
+
+ocr/TW-Sung-98_1.ttf
