@@ -106,11 +106,21 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_dir", required=True)
+    parser.add_argument("-o", "--output_dir")
     args = parser.parse_args()
 
+    count = 0
     file_list = os.listdir(args.input_dir)
     for file_name in file_list:
-        img = cv2.imread(os.path.join(args.input_dir,file_name), cv2.IMREAD_GRAYSCALE)
-        brightness = np.random.randint(0,255)
-        morph_its = np.random.randint(1,4)
-        aug_img = augment(img,brightness,morph_its)
+        for i in range(2):
+            img = cv2.imread(os.path.join(args.input_dir,file_name), cv2.IMREAD_GRAYSCALE)
+            brightness = np.random.randint(0,255)
+            morph_its = np.random.randint(1,4)
+            aug_img = augment(img,brightness,morph_its)
+            if args.output_dir:
+                cv2.imwrite(os.path.join(args.output_dir,f"{file_name[:4]}-{i}.png"),aug_img)
+                count += 1
+                print(f"wrote {count} images to {args.output_dir}", end="\r")
+            else:
+                show(f"{brightness}-{morph_its}",aug_img)
+                break

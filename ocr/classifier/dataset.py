@@ -68,11 +68,15 @@ if __name__ == "__main__":
 
     transform = transforms.Compose([transforms.ToTensor()])
     train_data = CharacterDataset("synthetic_train_data/", "uni", (299,299), transform=transform)
+    train_data2 = RandomizedCharacterDataset("glyphs","uni",(224,224),transform=transform)
+    val_data = CharacterDataset("val_data", "char", (224,224),transform=transform)
     trainloader = DataLoader(train_data, shuffle=True, batch_size=1)
-
+    trainloader2 = DataLoader(train_data2, shuffle=True, batch_size=1)
+    val_loader = DataLoader(val_data, shuffle=True)
     print("showing 10 random samples from the dataset")
 
-    data_iter = iter(trainloader)
+    data_iter = iter(val_loader)
+    data_iter2 = iter(trainloader2)
 
     for i in range(10):
         img, label = next(data_iter)
