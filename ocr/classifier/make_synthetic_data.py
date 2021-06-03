@@ -50,56 +50,68 @@ def add_patches(img,number,size,brightness,padding):
     # add patches to img wherever this wouldn't cause integer overflow
     return np.where(img<=255-patches,img+patches,255)
 
-def augment(char_img, brightness=0, morph_its=2):
+def augment(char_img, brightness, morph_its):
 
     # resizing
-    dim_variance = np.random.randint(0,15)
-    content_dim = (90+dim_variance,90+dim_variance)
-    padding = 20
+    content_dim = (100,100)
+    padding = np.random.randint(15,25)
     img = char_img.copy()
     img = cv2.resize(img, content_dim)
 
     # padding but random = random translation
-    total_padding = padding*2
-    top_padding = np.random.randint(0,total_padding-padding//2)
-    btm_padding = total_padding-top_padding
-    left_padding = np.random.randint(0,total_padding-padding//2)
-    right_padding = total_padding-left_padding
+    # total_padding = padding*2
+    # top_padding = np.random.randint(0,total_padding-padding//2)
+    # btm_padding = total_padding-top_padding
+    # left_padding = np.random.randint(0,total_padding-padding//2)
+    # right_padding = total_padding-left_padding
     img = cv2.copyMakeBorder(
         img,
-        top_padding,
-        btm_padding,
-        left_padding,
-        right_padding,
+        padding,
+        padding,
+        padding,
+        padding,
         cv2.BORDER_CONSTANT,
         value=255
     )
 
-    img = cv2.erode(img,np.ones((4,4)))
+    # show("img",img)
 
+
+    # show("img",img)
     # pepper + morphology = nice
     pepper(img,0,0.01*morph_its)
     open_close_kernel = np.ones((2,2),np.uint8)
     img = cv2.morphologyEx(img, cv2.MORPH_OPEN,  open_close_kernel, iterations=morph_its, borderType=cv2.BORDER_REPLICATE)
     img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, open_close_kernel, iterations=morph_its, borderType=cv2.BORDER_REPLICATE)
 
+    # show("img",img)
     # less morph? more dilate!
-    if morph_its==1:
-        kernel_size = np.random.randint(1,4)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(kernel_size,kernel_size))
-        img = cv2.dilate(img,kernel)
+    # if morph_its==1:
+    #     kernel_size = np.random.randint(1,2)
+    #     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(kernel_size,kernel_size))
+    #     img = cv2.dilate(img,kernel)
+
+    img = cv2.erode(img,np.ones((3,3)))
+    # show("img",img)
+    vertical_lines = cv2.dilate(img.copy(),np.ones((7,1)))
+    img = cv2.erode(img,np.ones((3,3)))
+    img = cv2.blur(img,(10,10))
+    b = brightness
+    img = np.where(img<=255-b,img+b,255)
+    img = cv2.bitwise_and(img,vertical_lines)
 
     # add patches of increased brightness
-    img = add_patches(img,12,15,brightness,padding)
+    # img = add_patches(img,12,15,brightness,padding)
 
     # blur
-    img = cv2.blur(img,(5,5))
+    img = cv2.blur(img,(8,8))
 
     # distort
     alpha = 30 # bigger alpha => distort more
     sigma = 8 # bigger sigma => bigger radius of gausian distortions
     img = elastic_transform(img,alpha,sigma)
 
+    # show("img",img)
     return img
 
 if __name__ == "__main__":
@@ -114,8 +126,8 @@ if __name__ == "__main__":
     for file_name in file_list:
         for i in range(2):
             img = cv2.imread(os.path.join(args.input_dir,file_name), cv2.IMREAD_GRAYSCALE)
-            brightness = np.random.randint(0,255)
-            morph_its = np.random.randint(1,4)
+            brightness = 50
+            morph_its = np.random.randint(1,3) # 1 o. 2
             aug_img = augment(img,brightness,morph_its)
             if args.output_dir:
                 cv2.imwrite(os.path.join(args.output_dir,f"{file_name[:4]}-{i}.png"),aug_img)
