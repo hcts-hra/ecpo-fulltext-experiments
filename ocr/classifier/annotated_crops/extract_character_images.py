@@ -171,7 +171,7 @@ def crop_chars(image,img_idx,write_processed_images=False):
                 255
             )
             # add white (255) padding around char_image to make it squared
-            img_size = max(char_image.shape[0],char_image.shape[1])
+            img_size = max(char_image.shape[0],char_image.shape[1],30) # pad to at least 30 px
             vertical_padding = img_size - char_image.shape[0]
             if vertical_padding%2: # odd number
                 top_padding = vertical_padding // 2 + 1
@@ -207,6 +207,7 @@ def crop_chars(image,img_idx,write_processed_images=False):
 
     # "e" has been inserted as a placeholder where a character is missing or illegible (&gaiji;)
     img_annotation_dict.pop("e", None)
+    img_annotation_dict.pop("c", None) # "cc" was inserted for a two-slot "、" (starting from 400.txt)
     for char,img_list in img_annotation_dict.items():
         for char_image,col_idx,row_idx in img_list:
             if np.isnan(char_image).any():
@@ -224,7 +225,7 @@ if __name__ == "__main__":
         crop_chars(img,sys.argv[1],write_processed_images=True)
     else: # all png files
         for file in os.listdir("."):
-            if file.endswith(".png"):
+            if file.endswith(".png") and file.startswith("4"):
                 print("processing", file, end="\r")
                 img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
                 crop_chars(img,file[:3],write_processed_images=False)
