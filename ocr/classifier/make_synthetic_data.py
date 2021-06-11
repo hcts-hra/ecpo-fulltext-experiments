@@ -50,11 +50,11 @@ def add_patches(img,number,size,brightness,padding):
     # add patches to img wherever this wouldn't cause integer overflow
     return np.where(img<=255-patches,img+patches,255)
 
-def augment(char_img, brightness, morph_its):
+def augment(char_img):
 
     # resizing
     content_dim = (100,100)
-    padding = np.random.randint(15,25)
+    padding = np.random.randint(12,18)
     img = char_img.copy()
     img = cv2.resize(img, content_dim)
 
@@ -74,37 +74,31 @@ def augment(char_img, brightness, morph_its):
         value=255
     )
 
-    # show("img",img)
-
-
-    # show("img",img)
     # pepper + morphology = nice
+    morph_its = np.random.randint(1,4)
     pepper(img,0,0.01*morph_its)
     open_close_kernel = np.ones((2,2),np.uint8)
     img = cv2.morphologyEx(img, cv2.MORPH_OPEN,  open_close_kernel, iterations=morph_its, borderType=cv2.BORDER_REPLICATE)
     img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, open_close_kernel, iterations=morph_its, borderType=cv2.BORDER_REPLICATE)
-
-    # show("img",img)
-    # less morph? more dilate!
-    # if morph_its==1:
-    #     kernel_size = np.random.randint(1,2)
-    #     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(kernel_size,kernel_size))
-    #     img = cv2.dilate(img,kernel)
 
     img = cv2.erode(img,np.ones((3,3)))
     # show("img",img)
     vertical_lines = cv2.dilate(img.copy(),np.ones((7,1)))
     img = cv2.erode(img,np.ones((3,3)))
     img = cv2.blur(img,(10,10))
-    b = brightness
-    img = np.where(img<=255-b,img+b,255)
+    # b = brightness
+    # img = np.where(img<=255-b,img+b,255)
+    img = add_patches(img,10,12,150,padding)
     img = cv2.bitwise_and(img,vertical_lines)
 
     # add patches of increased brightness
     # img = add_patches(img,12,15,brightness,padding)
 
     # blur
-    img = cv2.blur(img,(8,8))
+    blur_kernel_size = np.random.randint(8,15)
+    img = cv2.blur(img,(blur_kernel_size,blur_kernel_size))
+    # to re-scale array from a range between min and max to (0,1): (array-min)/(max-min)
+    img = np.uint8((img-img.min()) / (img.max()-img.min()) * 255)
 
     # distort
     alpha = 30 # bigger alpha => distort more

@@ -118,7 +118,7 @@ def crop_chars(image,img_idx,write_processed_images=False):
         cv2.imwrite(f"binary-{img_idx}.jpg",bin_img)
 
     # black rectangle at the outside to find peak outside of outmost character
-    cv2.rectangle(bin_img,(0,0),(bin_img.shape[1],bin_img.shape[0]),(0),2)
+    cv2.rectangle(bin_img,(0,0),(bin_img.shape[1]-1,bin_img.shape[0]-1),(0),1)
     proj_ver = np.sum(bin_img, axis=0)
     proj_hor = np.sum(bin_img, axis=1)
 
@@ -206,6 +206,7 @@ def crop_chars(image,img_idx,write_processed_images=False):
                 img_annotation_dict[char_annotation].append((char_image,len(columns)-i,j+1))
 
     # "e" has been inserted as a placeholder where a character is missing or illegible (&gaiji;)
+    img_annotation_dict.pop("\u3000", None)
     img_annotation_dict.pop("e", None)
     img_annotation_dict.pop("c", None) # "cc" was inserted for a two-slot "、" (starting from 400.txt)
     for char,img_list in img_annotation_dict.items():
@@ -224,10 +225,12 @@ if __name__ == "__main__":
         img = cv2.imread(f"{sys.argv[1]}.png", cv2.IMREAD_GRAYSCALE)
         crop_chars(img,sys.argv[1],write_processed_images=True)
     else: # all png files
+        count = 0
         for file in os.listdir("."):
-            if file.endswith(".png") and file.startswith("4"):
-                print("processing", file, end="\r")
+            if file.endswith(".png"):
                 img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
                 crop_chars(img,file[:3],write_processed_images=False)
+                count += 1
+                print(f"processed {count} files", end="\r")
         print(" "*30, end="\r")
         print("done")

@@ -19,7 +19,6 @@ def build_dataset(path,train_size,exclude):
     into train and val set
     """
 
-    # create dictionary like this: {'8B39': [(120, 10, 4), (119, 8, 4)], '542B': ...}
     char_imgs = os.listdir(path)
     char_img_indices = {extract_indices(f) for f in char_imgs}
     crop_indices = list({

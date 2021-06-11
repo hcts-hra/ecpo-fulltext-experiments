@@ -49,11 +49,13 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", required=True)
     parser.add_argument("-v", "--validation_data", required=True)
     parser.add_argument("-d", "--input_dim", type=int, required=True)
+    parser.add_argument("-k", "--top_k", type=int, required=True)
     args = parser.parse_args()
 
     MODEL_PATH = args.model
     VAL_DATA = args.validation_data.rstrip("/")
     INPUT_DIM = args.input_dim
+    K = args.top_k
 
     # load dataset and prepare data loader
     transform = transforms.Compose([transforms.ToTensor()])
@@ -77,25 +79,30 @@ if __name__ == "__main__":
 
     with torch.no_grad():
         count = 0
-        correct_count = 0
+        correct_counts = np.zeros(K).astype(int) # count correct predictions for top 1, top 2, ..., top k
 
         for imgs, labels in eval_loader:
             if device == "cuda":
                 imgs, labels = imgs.cuda(), labels.cuda()
 
             preds = model(imgs)
-            classidx = torch.argmax(preds)
-            predicted_char = chr(int(eval_data.label2unicode[int(classidx)],16))
+            # classidx = torch.argmax(preds) # top 1
+            top_k_indices = torch.topk(preds,K)[1][0] # values at [0], indices at [1]
+
             goldlabel_char = chr(int(eval_data.label2unicode[int(labels)],16))
-            if predicted_char == goldlabel_char:
-                correct_count += 1
-            # else:
-            #     print(predicted_char,goldlabel_char)
+            top_k_chars = [chr(int(eval_data.label2unicode[int(idx)],16)) for idx in top_k_indices]
+
+            if goldlabel_char in top_k_chars:
+                # print(goldlabel_char, top_k_chars)
+                # print(top_k_chars.index(goldlabel_char))
+                # print(correct_counts)
+                correct_counts[top_k_chars.index(goldlabel_char):] += 1
+                # e.g. if top_k_chars.index(goldlabel_char) == 3, add one to every index <= 3 in correct_counts
 
             count += 1
-            print(f"{count}/{len(eval_loader)}", end="\r")
+            print(f"{count}/{len(eval_loader)}, {np.round(correct_counts/count*100,2)}", end="\r")
 
-        print("accuracy:", np.round(correct_count/len(eval_loader)*100,2))
+        # print("accuracy:", np.round(correct_count/len(eval_loader)*100,2))
     # rounded_acc_in_percent = np.round(correct_count/len(eval_loader)*100,2)
     #
     # if len(sys.argv) == 2: # evaluate manually on argv[1]

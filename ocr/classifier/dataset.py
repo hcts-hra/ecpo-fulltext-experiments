@@ -55,9 +55,7 @@ class RandomizedCharacterDataset(CharacterDataset):
 
         # randomize here and load original glyph imgs as dataset
         # instead of creating a whole new dataset and training on it
-        brightness = np.random.randint(0,255)
-        morph_its = np.random.randint(1,4)
-        aug_img = augment(img,brightness,morph_its)
+        aug_img = augment(img)
 
         # proceed as in parent class
         return aug_img
@@ -68,8 +66,8 @@ if __name__ == "__main__":
 
     transform = transforms.Compose([transforms.ToTensor()])
     train_data = CharacterDataset("synthetic_train_data/", "uni", (299,299), transform=transform)
-    train_data2 = RandomizedCharacterDataset("glyphs","uni",(224,224),transform=transform)
-    val_data = CharacterDataset("val_data", "char", (224,224),transform=transform)
+    train_data2 = RandomizedCharacterDataset("ma","uni",(224,224),transform=transform)
+    val_data = CharacterDataset("test", "char", (224,224),transform=transform)
     trainloader = DataLoader(train_data, shuffle=True, batch_size=1)
     trainloader2 = DataLoader(train_data2, shuffle=True, batch_size=1)
     val_loader = DataLoader(val_data, shuffle=True)

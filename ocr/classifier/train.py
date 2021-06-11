@@ -17,6 +17,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model", required=True)
+    parser.add_argument("-c", "--checkpoint")
     parser.add_argument("-t", "--training_data", required=True)
     parser.add_argument("-f", "--file_naming", required=True,
         help="'char' if train imgs start with character (like '鼓'), 'uni' if with 4-char unicode (like '9F13')")
@@ -30,6 +31,7 @@ if __name__ == "__main__":
 
     # hyperparameters
     MODEL = args.model
+    CHECKPOINT = args.checkpoint
     TRAIN_PATH = args.training_data.rstrip("/")
     TRAIN_FILE_NAMING = args.file_naming
     VAL_PATH = args.validation_data
@@ -62,6 +64,10 @@ if __name__ == "__main__":
         model = models.InceptionModel(num_classes=NUM_CLASSES)
     elif MODEL == "googlenet":
         model = models.GoogleNetModel(num_classes=NUM_CLASSES)
+
+    # load checkpoint if provided
+    if CHECKPOINT:
+        model.load_state_dict(torch.load(CHECKPOINT,map_location=torch.device(device)))
 
     # check for	GPUs
     print(f"will be using {torch.cuda.device_count()} GPUs")
