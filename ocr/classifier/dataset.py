@@ -55,7 +55,11 @@ class RandomizedCharacterDataset(CharacterDataset):
 
         # randomize here and load original glyph imgs as dataset
         # instead of creating a whole new dataset and training on it
-        aug_img = augment(img)
+        morph_its = np.random.randint(1,3) # 1 or 2
+        blur_kernel_size = np.random.randint(8,18)
+        brightness = np.random.randint(-100,50)
+        print(morph_its,blur_kernel_size,brightness)
+        aug_img = augment(img,morph_its,blur_kernel_size,brightness)
 
         # proceed as in parent class
         return aug_img
@@ -65,19 +69,17 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     transform = transforms.Compose([transforms.ToTensor()])
-    train_data = CharacterDataset("synthetic_train_data/", "uni", (299,299), transform=transform)
-    train_data2 = RandomizedCharacterDataset("ma","uni",(224,224),transform=transform)
-    val_data = CharacterDataset("test", "char", (224,224),transform=transform)
+    train_data = RandomizedCharacterDataset("glyphs","uni",(224,224),transform=transform)
+    # val_data = CharacterDataset("test", "char", (224,224),transform=transform)
     trainloader = DataLoader(train_data, shuffle=True, batch_size=1)
-    trainloader2 = DataLoader(train_data2, shuffle=True, batch_size=1)
-    val_loader = DataLoader(val_data, shuffle=True)
+    # val_loader = DataLoader(val_data, shuffle=True)
     print("showing 10 random samples from the dataset")
 
-    data_iter = iter(val_loader)
-    data_iter2 = iter(trainloader2)
+    # data_iter = iter(val_loader)
+    data_iter2 = iter(trainloader)
 
     for i in range(10):
-        img, label = next(data_iter)
+        img, label = next(data_iter2)
         print(label)
         unicode = train_data.label2unicode[int(label)]
         print(unicode)

@@ -84,23 +84,37 @@ if __name__ == "__main__":
         for imgs, labels in eval_loader:
             if device == "cuda":
                 imgs, labels = imgs.cuda(), labels.cuda()
-
+            print(imgs.shape)
             preds = model(imgs)
             # classidx = torch.argmax(preds) # top 1
-            top_k_indices = torch.topk(preds,K)[1][0] # values at [0], indices at [1]
+
+            top_k = torch.topk(preds,K)
 
             goldlabel_char = chr(int(eval_data.label2unicode[int(labels)],16))
-            top_k_chars = [chr(int(eval_data.label2unicode[int(idx)],16)) for idx in top_k_indices]
+            top_k_chars = [chr(int(eval_data.label2unicode[int(idx)],16)) for idx in top_k.indices[0]]
+            top_k_scores = [round(int(val),2) for val in top_k.values[0]]
 
-            if goldlabel_char in top_k_chars:
-                # print(goldlabel_char, top_k_chars)
-                # print(top_k_chars.index(goldlabel_char))
-                # print(correct_counts)
-                correct_counts[top_k_chars.index(goldlabel_char):] += 1
-                # e.g. if top_k_chars.index(goldlabel_char) == 3, add one to every index <= 3 in correct_counts
+            # only for demonstration purposes:
+            # if goldlabel_char != top_k_chars[0]:
+            #     print(goldlabel_char, ":", top_k_chars)
+            #     print("="*30)
 
-            count += 1
-            print(f"{count}/{len(eval_loader)}, {np.round(correct_counts/count*100,2)}", end="\r")
+            # for cumulative accuracy
+            # if goldlabel_char in top_k_chars:
+            #     correct_counts[top_k_chars.index(goldlabel_char):] += 1
+            #     # e.g. if top_k_chars.index(goldlabel_char) == 3, add one to every index <= 3 in correct_counts
+            # count += 1
+            # print(f"{count}/{len(eval_loader)}, {np.round(correct_counts/count*100,2)}", end="\r")
+
+            # to check confidence of top-1 candidate
+            if goldlabel_char == top_k_chars[0]:
+                print("+", end="")
+            else:
+                print("–", end="")
+            for i in range(5):
+                print(f" {top_k_chars[i]} {top_k_scores[i]};", end="")
+            print()
+
 
         # print("accuracy:", np.round(correct_count/len(eval_loader)*100,2))
     # rounded_acc_in_percent = np.round(correct_count/len(eval_loader)*100,2)

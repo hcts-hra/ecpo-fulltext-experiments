@@ -17,7 +17,8 @@ def correct_skew(img, delta=0.5, limit=2):
         score_ver = np.sum((proj_ver[1:] - proj_ver[:-1]) ** 2)
         return score_ver+score_hor
 
-    binary,_ = better_binarize(img,c=10)
+    binary = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
+           cv2.THRESH_BINARY,125,0)
 
     scores = []
     angles = np.arange(-limit, limit + delta, delta)
@@ -56,7 +57,8 @@ def check_intersection(a,b):
 
 def better_binarize(original_img,c=0,leave_partly_gray=False):
     """
-    performs adaptive thresholding but leaves the background white even for
+    performs adaptive thresholding but leaves the background white even for small kernel sizes
+    a negate c is only to be used with leave_partly_gray==True!
     """
     img = original_img.copy()
     kernel_size = 7 # to compute averages of local surrounding area
@@ -205,9 +207,9 @@ def crop_chars(image,img_idx,write_processed_images=False):
                 char_annotation = columns[-i-1][j]
                 img_annotation_dict[char_annotation].append((char_image,len(columns)-i,j+1))
 
-    # "e" has been inserted as a placeholder where a character is missing or illegible (&gaiji;)
-    img_annotation_dict.pop("\u3000", None)
-    img_annotation_dict.pop("e", None)
+    img_annotation_dict.pop("\u3000", None) # full-space space
+    img_annotation_dict.pop("T", None) # we only want to learn Chinese Characters
+    img_annotation_dict.pop("e", None) # "e" has been inserted as a placeholder where a character is missing or illegible (&gaiji;)
     img_annotation_dict.pop("c", None) # "cc" was inserted for a two-slot "、" (starting from 400.txt)
     for char,img_list in img_annotation_dict.items():
         for char_image,col_idx,row_idx in img_list:
