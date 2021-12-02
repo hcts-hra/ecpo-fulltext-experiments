@@ -1,5 +1,7 @@
 # ECPO full text
 
+This repository contains the code for the experiments documented in the [wiki](https://github.com/exc-asia-and-europe/ecpo-fulltext-experiments/wiki). This code is mostly undocumented and not specifically designed for reusability. Another repository with a reusable OCR pipeline is currently being worked on. 
+
 This is part of the [Early Chinese Periodicals Online project](https://uni-heidelberg.de/ecpo) and its related GitHub repositories:
 - [ecpo](https://github.com/exc-asia-and-europe/ecpo) full text ground truth
 - [ecpo-backend](https://github.com/exc-asia-and-europe/ECPO-backend) backend of the sql system
